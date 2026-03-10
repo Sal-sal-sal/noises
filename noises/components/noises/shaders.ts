@@ -181,10 +181,11 @@ export const FRAGMENT_SHADERS: Record<NoiseId, string> = {
     }
 
     float getHeight(vec2 uv, float t){
+      float speed = 0.5;
       // Каждый слой — отдельный Perlin со своим направлением
-      float h1 = layer(uv + vec2( 0.07,  0.04) * t);
-      float h2 = layer(uv + vec2(-0.05,  0.06) * t + vec2(5.2, 1.3));
-      float h3 = layer(uv + vec2( 0.02, -0.07) * t + vec2(9.7, 4.1));
+      float h1 = layer(uv + vec2( 0.07,  0.04) * t * speed);
+      float h2 = layer(uv + vec2(-0.05,  0.06) * t * speed + vec2(5.2, 1.3));
+      float h3 = layer(uv + vec2( 0.02, -0.07) * t * speed + vec2(9.7, 4.1));
 
       // Интерференция через умножение амплитуд:
       // когда оба на пике — усиление, когда один на нуле — поглощение
