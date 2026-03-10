@@ -1,4 +1,4 @@
-export type NoiseId = "white" | "perlin" | "worley" | "fbm" | "domain" | "ridged";
+export type NoiseId = "white" | "perlin" | "worley" | "fbm" | "domain" | "ridged" | "contour";
 
 export interface NoiseType {
   id: NoiseId;
@@ -12,5 +12,6 @@ export const NOISE_TYPES: NoiseType[] = [
   { id: "worley", label: "Worley",      desc: "Cellular / voronoi"},
   { id: "fbm",    label: "FBM",         desc: "Fractal brownian"  },
   { id: "domain", label: "Domain Warp", desc: "Topological flow"  },
-  { id: "ridged", label: "Ridged",      desc: "Sharp ridges"      },
+  { id: "ridged",  label: "Ridged",      desc: "Sharp ridges"      },
+  { id: "contour", label: "Contour",     desc: "Topo isolines"     },
 ];

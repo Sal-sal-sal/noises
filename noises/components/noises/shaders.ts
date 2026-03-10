@@ -1,15 +1,18 @@
 import { NoiseId } from "./types";
 
+// uColor передаётся из React как vec3 (0.0–1.0)
+// итоговый цвет = noise * uColor, темные участки остаются темными
 export const FRAGMENT_SHADERS: Record<NoiseId, string> = {
   white: `
     precision mediump float;
     uniform float time;
     uniform vec2 resolution;
+    uniform vec3 uColor;
     float rand(vec2 st){ return fract(sin(dot(st, vec2(12.9898,78.233)))*43758.5453); }
     void main(){
       vec2 uv = gl_FragCoord.xy / resolution;
       float n = rand(uv + fract(time * 0.1));
-      gl_FragColor = vec4(n, n*0.1, n*0.05, 1.0);
+      gl_FragColor = vec4(n * uColor, 1.0);
     }
   `,
 
@@ -17,6 +20,7 @@ export const FRAGMENT_SHADERS: Record<NoiseId, string> = {
     precision mediump float;
     uniform float time;
     uniform vec2 resolution;
+    uniform vec3 uColor;
     vec2 fade(vec2 t){ return t*t*t*(t*(t*6.0-15.0)+10.0); }
     float rand(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
     vec2 grad(vec2 p){ float r=rand(p); float a=r*6.2831853; return vec2(cos(a),sin(a)); }
@@ -31,7 +35,7 @@ export const FRAGMENT_SHADERS: Record<NoiseId, string> = {
     void main(){
       vec2 uv = gl_FragCoord.xy / resolution * 4.0;
       float n = perlin(uv + time * 0.3);
-      gl_FragColor = vec4(n, n*0.15, n*0.08, 1.0);
+      gl_FragColor = vec4(n * uColor, 1.0);
     }
   `,
 
@@ -39,6 +43,7 @@ export const FRAGMENT_SHADERS: Record<NoiseId, string> = {
     precision mediump float;
     uniform float time;
     uniform vec2 resolution;
+    uniform vec3 uColor;
     float rand(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
     vec2 randv(vec2 p){ return vec2(rand(p), rand(p+vec2(3.7,1.9))); }
     float worley(vec2 p){
@@ -54,7 +59,7 @@ export const FRAGMENT_SHADERS: Record<NoiseId, string> = {
     void main(){
       vec2 uv=gl_FragCoord.xy/resolution*5.0;
       float n=worley(uv);
-      gl_FragColor=vec4(n,n*0.1,n*0.05,1.0);
+      gl_FragColor=vec4(n * uColor, 1.0);
     }
   `,
 
@@ -62,6 +67,7 @@ export const FRAGMENT_SHADERS: Record<NoiseId, string> = {
     precision mediump float;
     uniform float time;
     uniform vec2 resolution;
+    uniform vec3 uColor;
     float rand(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
     vec2 grad(vec2 p){ float r=rand(p); float a=r*6.2831853; return vec2(cos(a),sin(a)); }
     vec2 fade(vec2 t){ return t*t*t*(t*(t*6.0-15.0)+10.0); }
@@ -78,15 +84,15 @@ export const FRAGMENT_SHADERS: Record<NoiseId, string> = {
     void main(){
       vec2 uv=gl_FragCoord.xy/resolution*3.0;
       float n=fbm(uv+time*0.15);
-      gl_FragColor=vec4(n,n*0.12,n*0.06,1.0);
+      gl_FragColor=vec4(n * uColor, 1.0);
     }
   `,
 
-  // Fixed: use normalized centered UV so the warp is symmetric on screen
   domain: `
     precision mediump float;
     uniform float time;
     uniform vec2 resolution;
+    uniform vec3 uColor;
 
     float rand(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123); }
     vec2 grad(vec2 p){ float r=rand(p); float a=r*6.2831853; return vec2(cos(a),sin(a)); }
@@ -108,20 +114,11 @@ export const FRAGMENT_SHADERS: Record<NoiseId, string> = {
     }
 
     void main(){
-      // centered UV — fixes the off-center issue
       vec2 uv = (gl_FragCoord.xy - resolution * 0.5) / min(resolution.x, resolution.y) * 3.0;
-
-      vec2 q = vec2(
-        fbm(uv + vec2(0.0, 0.0) + time * 0.08),
-        fbm(uv + vec2(5.2, 1.3) + time * 0.08)
-      );
-      vec2 r = vec2(
-        fbm(uv + 4.0*q + vec2(1.7, 9.2) + time * 0.06),
-        fbm(uv + 4.0*q + vec2(8.3, 2.8) + time * 0.06)
-      );
-      float n = fbm(uv + 4.0*r + time * 0.04);
-
-      gl_FragColor = vec4(n, n*0.1, n*0.04, 1.0);
+      vec2 q = vec2(fbm(uv + vec2(0.0,0.0) + time*0.08), fbm(uv + vec2(5.2,1.3) + time*0.08));
+      vec2 r = vec2(fbm(uv + 4.0*q + vec2(1.7,9.2) + time*0.06), fbm(uv + 4.0*q + vec2(8.3,2.8) + time*0.06));
+      float n = fbm(uv + 4.0*r + time*0.04);
+      gl_FragColor = vec4(n * uColor, 1.0);
     }
   `,
 
@@ -129,6 +126,7 @@ export const FRAGMENT_SHADERS: Record<NoiseId, string> = {
     precision mediump float;
     uniform float time;
     uniform vec2 resolution;
+    uniform vec3 uColor;
     float rand(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453); }
     vec2 grad(vec2 p){ float r=rand(p); float a=r*6.2831853; return vec2(cos(a),sin(a)); }
     vec2 fade(vec2 t){ return t*t*t*(t*(t*6.0-15.0)+10.0); }
@@ -149,7 +147,83 @@ export const FRAGMENT_SHADERS: Record<NoiseId, string> = {
     void main(){
       vec2 uv=gl_FragCoord.xy/resolution*3.0;
       float n=ridged(uv+time*0.12);
-      gl_FragColor=vec4(n,n*0.1,n*0.04,1.0);
+      gl_FragColor=vec4(n * uColor, 1.0);
+    }
+  `,
+
+  contour: `
+    precision mediump float;
+    uniform float time;
+    uniform vec2 resolution;
+    uniform vec3 uColor;
+
+    float rand(vec2 p){ return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123); }
+    vec2 grad(vec2 p){ float r=rand(p); float a=r*6.2831853; return vec2(cos(a),sin(a)); }
+    vec2 fade(vec2 t){ return t*t*t*(t*(t*6.0-15.0)+10.0); }
+
+    float perlin(vec2 p){
+      vec2 i=floor(p); vec2 f=fract(p); vec2 u=fade(f);
+      return mix(
+        mix(dot(grad(i),f), dot(grad(i+vec2(1,0)),f-vec2(1,0)), u.x),
+        mix(dot(grad(i+vec2(0,1)),f-vec2(0,1)), dot(grad(i+vec2(1,1)),f-vec2(1,1)), u.x),
+        u.y
+      )*0.5+0.5;
+    }
+
+    float layer(vec2 p){
+      float v=0.0; float a=0.5;
+      for(int i=0;i<4;i++){
+        v += a * perlin(p);
+        p  = p * 1.6 + vec2(3.1, 1.7);
+        a *= 0.5;
+      }
+      return v;
+    }
+
+    // Считает изолинию для заданного height поля
+    float isoline(float h, float hx, float hy, float lines){
+      float hh   = h * lines;
+      float hhx  = hx * lines;
+      float hhy  = hy * lines;
+      float fw   = max(abs(hhx - hh) + abs(hhy - hh), 0.001);
+      float f    = fract(hh);
+      float dist = min(f, 1.0 - f);
+      return 1.0 - smoothstep(fw * 0.2, fw * 0.8, dist);
+    }
+
+    void main(){
+      vec2 uv = (gl_FragCoord.xy - resolution * 0.5) / min(resolution.x, resolution.y) * 1.4;
+      float eps = 2.0 / min(resolution.x, resolution.y);
+
+      // 3 слоя движутся в разные стороны с разной скоростью
+      vec2 d1 = vec2( 0.07,  0.04) * time;  // вправо-вверх
+      vec2 d2 = vec2(-0.05,  0.06) * time;  // влево-вверх
+      vec2 d3 = vec2( 0.03, -0.08) * time;  // вправо-вниз
+
+      float h1  = layer(uv + d1);
+      float h1x = layer(uv + vec2(eps,0.0) + d1);
+      float h1y = layer(uv + vec2(0.0,eps) + d1);
+
+      float h2  = layer(uv + d2 + vec2(5.2, 1.3));
+      float h2x = layer(uv + vec2(eps,0.0) + d2 + vec2(5.2, 1.3));
+      float h2y = layer(uv + vec2(0.0,eps) + d2 + vec2(5.2, 1.3));
+
+      float h3  = layer(uv + d3 + vec2(9.7, 4.1));
+      float h3x = layer(uv + vec2(eps,0.0) + d3 + vec2(9.7, 4.1));
+      float h3y = layer(uv + vec2(0.0,eps) + d3 + vec2(9.7, 4.1));
+
+      // Интерференция — слои складываются и нормализуются
+      float height  = (h1 + h2 + h3) / 3.0;
+      float heightx = (h1x + h2x + h3x) / 3.0;
+      float heighty = (h1y + h2y + h3y) / 3.0;
+
+      float lines = 20.0;
+      float line  = isoline(height, heightx, heighty, lines);
+
+      vec3 bg  = (vec3(1.0) - uColor) * 0.06;
+      vec3 col = mix(bg, uColor, line);
+
+      gl_FragColor = vec4(col, 1.0);
     }
   `,
 };

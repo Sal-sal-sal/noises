@@ -19,9 +19,12 @@ function compileShader(gl: WebGLRenderingContext, type: number, src: string): We
 
 export function useWebGL(
   canvasRef: React.RefObject<HTMLCanvasElement>,
-  activeNoise: NoiseId
+  activeNoise: NoiseId,
+  color: [number, number, number]
 ) {
   const frameRef = useRef<number>(0);
+  const colorRef = useRef(color);
+  colorRef.current = color; // обновляем без ре-рендера шейдера
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -59,14 +62,17 @@ export function useWebGL(
     gl.enableVertexAttribArray(posLoc);
     gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
 
-    const timeLoc = gl.getUniformLocation(prog, "time");
-    const resLoc  = gl.getUniformLocation(prog, "resolution");
+    const timeLoc  = gl.getUniformLocation(prog, "time");
+    const resLoc   = gl.getUniformLocation(prog, "resolution");
+    const colorLoc = gl.getUniformLocation(prog, "uColor");
 
     cancelAnimationFrame(frameRef.current);
 
     function render(t: number) {
+      const [r, g, b] = colorRef.current;
       gl!.uniform1f(timeLoc, t * 0.001);
       gl!.uniform2f(resLoc, canvas!.width, canvas!.height);
+      gl!.uniform3f(colorLoc, r, g, b);
       gl!.drawArrays(gl!.TRIANGLE_STRIP, 0, 4);
       frameRef.current = requestAnimationFrame(render);
     }
