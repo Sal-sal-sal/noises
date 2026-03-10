@@ -180,47 +180,35 @@ export const FRAGMENT_SHADERS: Record<NoiseId, string> = {
       return v;
     }
 
-    // Считает изолинию для заданного height поля
-    float isoline(float h, float hx, float hy, float lines){
-      float hh   = h * lines;
-      float hhx  = hx * lines;
-      float hhy  = hy * lines;
-      float fw   = max(abs(hhx - hh) + abs(hhy - hh), 0.001);
-      float f    = fract(hh);
-      float dist = min(f, 1.0 - f);
-      return 1.0 - smoothstep(fw * 0.2, fw * 0.8, dist);
+    float getHeight(vec2 uv, float t){
+      // Каждый слой — отдельный Perlin со своим направлением
+      float h1 = layer(uv + vec2( 0.07,  0.04) * t);
+      float h2 = layer(uv + vec2(-0.05,  0.06) * t + vec2(5.2, 1.3));
+      float h3 = layer(uv + vec2( 0.02, -0.07) * t + vec2(9.7, 4.1));
+
+      // Интерференция через умножение амплитуд:
+      // когда оба на пике — усиление, когда один на нуле — поглощение
+      float blend12 = h1 * h2 * 2.0;           // произведение = поглощение в нулях
+      float final   = mix(blend12, h3, 0.35);   // подмешиваем третий слой
+      return clamp(final, 0.0, 1.0);
     }
 
     void main(){
-      vec2 uv = (gl_FragCoord.xy - resolution * 0.5) / min(resolution.x, resolution.y) * 1.4;
+      vec2 uv  = (gl_FragCoord.xy - resolution * 0.5) / min(resolution.x, resolution.y) * 1.4;
       float eps = 2.0 / min(resolution.x, resolution.y);
 
-      // 3 слоя движутся в разные стороны с разной скоростью
-      vec2 d1 = vec2( 0.07,  0.04) * time;  // вправо-вверх
-      vec2 d2 = vec2(-0.05,  0.06) * time;  // влево-вверх
-      vec2 d3 = vec2( 0.03, -0.08) * time;  // вправо-вниз
+      float h  = getHeight(uv, time);
+      float hx = getHeight(uv + vec2(eps, 0.0), time);
+      float hy = getHeight(uv + vec2(0.0, eps), time);
 
-      float h1  = layer(uv + d1);
-      float h1x = layer(uv + vec2(eps,0.0) + d1);
-      float h1y = layer(uv + vec2(0.0,eps) + d1);
+      float lines = 70.0;
+      float hh   = h  * lines;
+      float fw   = max(abs(hx * lines - hh) + abs(hy * lines - hh), 0.001);
+      float f    = fract(hh);
+      float dist = min(f, 1.0 - f);
+      float line = 1.0 - smoothstep(fw * 1.5, fw * 2.0, dist);
 
-      float h2  = layer(uv + d2 + vec2(5.2, 1.3));
-      float h2x = layer(uv + vec2(eps,0.0) + d2 + vec2(5.2, 1.3));
-      float h2y = layer(uv + vec2(0.0,eps) + d2 + vec2(5.2, 1.3));
-
-      float h3  = layer(uv + d3 + vec2(9.7, 4.1));
-      float h3x = layer(uv + vec2(eps,0.0) + d3 + vec2(9.7, 4.1));
-      float h3y = layer(uv + vec2(0.0,eps) + d3 + vec2(9.7, 4.1));
-
-      // Интерференция — слои складываются и нормализуются
-      float height  = (h1 + h2 + h3) / 3.0;
-      float heightx = (h1x + h2x + h3x) / 3.0;
-      float heighty = (h1y + h2y + h3y) / 3.0;
-
-      float lines = 20.0;
-      float line  = isoline(height, heightx, heighty, lines);
-
-      vec3 bg  = (vec3(1.0) - uColor) * 0.06;
+      vec3 bg  = (vec3(1.0) - uColor) * 0.5;
       vec3 col = mix(bg, uColor, line);
 
       gl_FragColor = vec4(col, 1.0);
